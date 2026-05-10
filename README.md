@@ -1,50 +1,47 @@
-# NotebookLM Clone (Fullstack RAG Pipeline)
+# RAG: Knowledge Retrieval Platform
 
-This is a complete RAG-powered application built as a clone of Google NotebookLM. It allows users to upload documents (PDF or text files) and converse with them via a beautiful web interface.
+A secure, AI-powered document intelligence platform built on a modern RAG (Retrieval-Augmented Generation) pipeline. This application allows users to seamlessly upload complex documents and instantly retrieve precise, fully-cited answers from their personal knowledge base.
 
-## Project Structure
+## Project Architecture
 
-- **`backend/`**: Node.js Express server that handles the LangChain RAG pipeline.
-- **`frontend/`**: Vanilla HTML/CSS/JS frontend application with a modern glassmorphism design.
+- **`backend/`**: Node.js Express API. Orchestrates the LangChain pipeline, chunking, and embedding generation.
+- **`frontend/`**: React application using Vite, styled with Tailwind CSS and Shadcn UI. Features a professional split-pane resizable layout and real-time state persistence.
 
-## Features Implemented
+## Core Features
 
-- **Ingestion**: Supports reading from `.pdf` and `.txt` files.
-- **Chunking**: Uses LangChain's `RecursiveCharacterTextSplitter`.
-- **Embedding**: Generates embeddings using Google's `gemini-embedding-2`.
-- **Storage**: Indexes and stores chunks and embeddings in **Qdrant** (Vector Database).
-- **Retrieval**: Uses cosine similarity retrieval via Qdrant to find the most relevant chunks.
-- **Generation**: Uses Google's `gemini-2.5-flash` with a strict system prompt to ensure answers are completely grounded in the retrieved document context.
-- **Management**: Allows deleting specific uploaded documents from the vector database.
+- **Multi-Format Ingestion**: Natively processes `.pdf`, `.txt`, `.md`, `.docx`, `.csv`, and `.xlsx` files.
+- **Dynamic Chunking**: Leverages LangChain's `RecursiveCharacterTextSplitter` for semantic document chunking.
+- **Google GenAI Embeddings**: Converts text chunks into dense vectors using `gemini-embedding-2`.
+- **Qdrant Vector Store**: Ensures ultra-fast cosine similarity retrieval and strictly synchronized state management for robust file deletion.
+- **Grounded Responses**: AI responses are powered by `gemini-2.5-flash` with strict grounding logic to prevent hallucinations, supporting full Markdown rendering.
+- **Resilient Infrastructure**: Built-in network retry layers for maximum stability against flaky connections and DNS drops.
 
-## Setup & Running
+## Setup & Local Development
 
-1. **Setup Qdrant Cloud Cluster**
-   - Go to [Qdrant Cloud](https://cloud.qdrant.io/) and create a free cluster.
-   - Copy the **Cluster URL** and **API Key** from your dashboard.
+### 1. Vector Database Setup
+- Create a free cluster on [Qdrant Cloud](https://cloud.qdrant.io/).
+- Retrieve your **Cluster URL** and **API Key**.
 
-2. **Configure Environment Variables**
-   Inside the `backend/` directory, update your `.env` file with your API keys:
-   ```env
-   OPENAI_API_KEY=sk-your-openai-api-key # Optional if using Gemini
-   GOOGLE_API_KEY=your-google-api-key
-   QDRANT_URL=https://your-cluster-id.cloud.qdrant.io:6333
-   QDRANT_API_KEY=your-qdrant-api-key
-   COLLECTION_NAME=NotebookLM_Clone
-   ```
+### 2. Environment Variables
+Inside the `backend/` directory, configure your `.env` file:
+```env
+GOOGLE_API_KEY=your-google-gemini-api-key
+QDRANT_URL=https://your-cluster-id.cloud.qdrant.io:6333
+QDRANT_API_KEY=your-qdrant-api-key
+COLLECTION_NAME=RAG-Application
+```
 
-3. **Start the Backend**
-   ```bash
-   cd backend
-   npm install
-   npm start
-   ```
+### 3. Run the Application
+Start the unified full-stack application from the project root:
+```bash
+# Install dependencies
+cd backend && npm install
+cd ../frontend && npm install
+npm run build
 
-4. **Start the Frontend**
-   Simply open `frontend/index.html` in your web browser, or use a tool like Live Server. You will be greeted with the web application!
+# Start the local development server
+cd ..
+npm run dev
+```
 
-## Usage
-
-1. Use the **Upload a Document** section to upload your knowledge base.
-2. Once indexed, type your question in the **Ask a Question** section.
-3. If you no longer need a document's context, type its filename into the **Manage Documents** section and hit delete.
+The server will automatically serve the frontend build and expose the backend API on `http://localhost:3000`.

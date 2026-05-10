@@ -1,7 +1,7 @@
 {
-  "name": "rag-project-root",
+  "name": "rag-knowledge-retrieval",
   "version": "1.0.0",
-  "description": "NotebookLM Clone Root",
+  "description": "RAG: Knowledge Retrieval Platform",
   "scripts": {
     "start": "cd backend && npm start",
     "dev": "npm run start",
