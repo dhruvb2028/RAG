@@ -1,6 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Document } from "../lib/types";
 
+const API_URL = import.meta.env.VITE_API_URL || "";
+
 export function useDocuments() {
   const [documents, setDocuments] = useState<Document[]>(() => {
     const saved = localStorage.getItem("rag_documents");
@@ -16,7 +18,7 @@ export function useDocuments() {
 
   // Ensure absolute transparency with Qdrant vector store
   useEffect(() => {
-    fetch("/documents")
+    fetch(`${API_URL}/documents`)
       .then(res => res.json())
       .then(data => {
         if (data.documents && Array.isArray(data.documents)) {
@@ -49,7 +51,7 @@ export function useDocuments() {
     formData.append("fileId", docId);
 
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", "/upload", true);
+    xhr.open("POST", `${API_URL}/upload`, true);
     
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable) {
@@ -90,7 +92,7 @@ export function useDocuments() {
     
     setDocuments((prev) => prev.filter((d) => d.id !== id));
     
-    fetch("/delete", {
+    fetch(`${API_URL}/delete`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fileId: docToDelete.id, fileName: docToDelete.name }),

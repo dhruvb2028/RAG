@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect } from "react";
 import { ChatMessage } from "../lib/types";
 
+const API_URL = import.meta.env.VITE_API_URL || "";
+
 export function useChat() {
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     const saved = localStorage.getItem("chat_messages");
@@ -28,7 +30,7 @@ export function useChat() {
     setMessages((prev) => [...prev, newUserMsg]);
     setIsTyping(true);
 
-    fetch("/ask", {
+    fetch(`${API_URL}/ask`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query: content })
