@@ -24,7 +24,11 @@ if (!fs.existsSync(uploadDir)) {
 }
 const upload = multer({ dest: "uploads/", limits: { fileSize: 10 * 1024 * 1024 } });
 
-app.use(cors());
+app.use(cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+}));
 app.use(express.json());
 
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
