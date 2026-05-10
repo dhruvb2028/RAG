@@ -22,7 +22,7 @@ const uploadDir = path.join(__dirname, "uploads");
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir);
 }
-const upload = multer({ dest: "uploads/", limits: { fileSize: 10 * 1024 * 1024 } });
+const upload = multer({ dest: uploadDir, limits: { fileSize: 10 * 1024 * 1024 } });
 
 app.use(cors({
     origin: "*",

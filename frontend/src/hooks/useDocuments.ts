@@ -70,9 +70,17 @@ export function useDocuments() {
           prev.map((d) => (d.id === docId ? { ...d, status: "Ready", progress: undefined } : d))
         );
       } else {
-        setDocuments((prev) =>
-          prev.map((d) => (d.id === docId ? { ...d, status: "Error", progress: undefined } : d))
-        );
+        try {
+          const res = JSON.parse(xhr.responseText);
+          console.error("Backend Error:", res.error);
+          setDocuments((prev) =>
+            prev.map((d) => (d.id === docId ? { ...d, status: "Error", name: `Error: ${res.error || "Upload failed"}`, progress: undefined } : d))
+          );
+        } catch(e) {
+          setDocuments((prev) =>
+            prev.map((d) => (d.id === docId ? { ...d, status: "Error", progress: undefined } : d))
+          );
+        }
       }
     };
 
