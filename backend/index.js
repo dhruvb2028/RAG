@@ -41,7 +41,7 @@ const qdrantClient = new QdrantClient({
 });
 
 async function getEmbeddings() {
-    return new GoogleGenerativeAIEmbeddings({ model: "text-embedding-004" });
+    return new GoogleGenerativeAIEmbeddings({ model: "embedding-001" });
 }
 
 // Helper to retry Qdrant network operations on transient DNS failures (EAI_AGAIN)
