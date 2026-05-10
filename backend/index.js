@@ -33,7 +33,7 @@ app.use(express.json());
 
 const QDRANT_URL = process.env.QDRANT_URL;
 const QDRANT_API_KEY = process.env.QDRANT_API_KEY;
-const COLLECTION_NAME = process.env.COLLECTION_NAME || "NotebookLM_Clone";
+const COLLECTION_NAME = process.env.COLLECTION_NAME || "RAG-Application";
 
 const qdrantClient = new QdrantClient({
     url: QDRANT_URL,
@@ -41,7 +41,7 @@ const qdrantClient = new QdrantClient({
 });
 
 async function getEmbeddings() {
-    return new GoogleGenerativeAIEmbeddings({ model: "gemini-embedding-2" });
+    return new GoogleGenerativeAIEmbeddings({ model: "text-embedding-004" });
 }
 
 // Helper to retry Qdrant network operations on transient DNS failures (EAI_AGAIN)
@@ -108,6 +108,9 @@ app.post("/upload", upload.single("file"), async (req, res) => {
         });
         
         const splitDocs = await textSplitter.splitDocuments(docs);
+        if (!splitDocs || splitDocs.length === 0) {
+            return res.status(400).json({ error: "No extractable text found in the uploaded document." });
+        }
         console.log(`Split into ${splitDocs.length} chunks. Generating embeddings and storing in Qdrant...`);
 
         const embeddings = await getEmbeddings();
