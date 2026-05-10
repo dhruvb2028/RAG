@@ -138,8 +138,9 @@ app.post("/upload", upload.single("file"), async (req, res) => {
         console.log("Indexing Completed Successfully!");
         res.json({ message: "Document uploaded and indexed successfully!" });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: err.message || "An error occurred during indexing." });
+        console.error("INDEXING ERROR:", err);
+        const errorMessage = err instanceof Error ? err.message : (typeof err === "string" ? err : JSON.stringify(err));
+        res.status(500).json({ error: errorMessage || "An error occurred during indexing." });
     } finally {
         if (filePath && fs.existsSync(filePath)) {
             try {
