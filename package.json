@@ -1,0 +1,10 @@
+{
+  "name": "rag-project-root",
+  "version": "1.0.0",
+  "description": "NotebookLM Clone Root",
+  "scripts": {
+    "start": "cd backend && npm start",
+    "dev": "npm run start",
+    "build": "cd frontend && npm run build"
+  }
+}
