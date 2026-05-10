@@ -81,11 +81,11 @@ app.post("/upload", upload.single("file"), async (req, res) => {
             const text = fs.readFileSync(filePath, "utf-8");
             docs = [new Document({ pageContent: text, metadata: { source: filePath } })];
         } else if (originalName.toLowerCase().endsWith(".docx")) {
-            const mammoth = require("mammoth");
+            const { default: mammoth } = await import("mammoth");
             const result = await mammoth.extractRawText({ path: filePath });
             docs = [new Document({ pageContent: result.value, metadata: { source: filePath } })];
         } else if (originalName.toLowerCase().endsWith(".csv") || originalName.toLowerCase().endsWith(".xlsx")) {
-            const xlsx = require("xlsx");
+            const { default: xlsx } = await import("xlsx");
             const workbook = xlsx.readFile(filePath);
             let text = "";
             workbook.SheetNames.forEach(sheetName => {
@@ -139,7 +139,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
         res.json({ message: "Document uploaded and indexed successfully!" });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "An error occurred during indexing." });
+        res.status(500).json({ error: err.message || "An error occurred during indexing." });
     } finally {
         if (filePath && fs.existsSync(filePath)) {
             try {
