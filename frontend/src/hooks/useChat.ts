@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect } from "react";
 import { ChatMessage } from "../lib/types";
 
-const API_URL = import.meta.env.VITE_API_URL || "";
+const RAW_URL = import.meta.env.VITE_API_URL || "";
+const API_URL = RAW_URL.endsWith('/') ? RAW_URL.slice(0, -1) : RAW_URL;
 
 export function useChat() {
   const [messages, setMessages] = useState<ChatMessage[]>(() => {

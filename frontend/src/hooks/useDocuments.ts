@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Document } from "../lib/types";
 
-const API_URL = import.meta.env.VITE_API_URL || "";
+const RAW_URL = import.meta.env.VITE_API_URL || "";
+const API_URL = RAW_URL.endsWith('/') ? RAW_URL.slice(0, -1) : RAW_URL;
 
 export function useDocuments() {
   const [documents, setDocuments] = useState<Document[]>(() => {
