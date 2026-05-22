@@ -183,12 +183,15 @@ ${historyPrompt}`;
 async function generateHydeDocument(query) {
     const llm = new ChatGoogleGenerativeAI({
         model: "gemini-2.5-flash",
-        temperature: 0.3,
+        temperature: 0.1,
     });
 
-    const hydePrompt = `Given the search query below, write a short, plausible hypothetical document section or answer that would directly answer this query.
-Do not worry about absolute factual correctness—simply write a coherent, detailed response that contains the typical vocabulary, terminology, and structure of a document answering this query.
-Do not include any introductions, headers, or explanations. Write only the hypothetical document content.
+    const hydePrompt = `Given the search query below, write a brief hypothetical document paragraph that directly answers this query.
+Rules:
+- Focus strictly on the exact concepts, entities, and actions requested in the query.
+- Do not introduce any speculative, outside, or irrelevant details, dates, names, or topics that are not directly implied by the query.
+- Maintain a factual, professional, and dry tone to match reference documents.
+- Do not include any introductions, headers, or explanations. Respond ONLY with the hypothetical document text.
 
 Query: "${query}"`;
 
