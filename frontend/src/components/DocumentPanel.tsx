@@ -1,11 +1,14 @@
 import { useRef } from "react";
 import { UploadCloud } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useDocuments } from "../hooks/useDocuments";
 import { FileItem } from "./FileItem";
 import { AnimatePresence, motion } from "framer-motion";
 
-export function DocumentPanel() {
+interface DocumentPanelProps {
+  docState: ReturnType<typeof import("../hooks/useDocuments").useDocuments>;
+}
+
+export function DocumentPanel({ docState }: DocumentPanelProps) {
   const {
     documents,
     isDragging,
@@ -14,7 +17,7 @@ export function DocumentPanel() {
     handleDragOver,
     handleDragLeave,
     handleDrop,
-  } = useDocuments();
+  } = docState;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 

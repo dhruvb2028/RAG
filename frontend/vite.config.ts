@@ -26,6 +26,8 @@ export default defineConfig({
       '/upload': 'http://localhost:3000',
       '/ask': 'http://localhost:3000',
       '/delete': 'http://localhost:3000',
+      '/documents': 'http://localhost:3000',
+      '/clear': 'http://localhost:3000',
     }
   },
 });

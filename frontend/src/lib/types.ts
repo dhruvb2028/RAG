@@ -8,10 +8,18 @@ export interface Document {
   pages?: number;
 }
 
+export interface RAGStep {
+  attempt: number;
+  rewrittenQuery: string;
+  hypotheticalAnswer?: string;
+  judgement?: { index: number; relevant: boolean }[];
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
   citations?: string[];
   timestamp: number;
+  ragSteps?: RAGStep[];
 }

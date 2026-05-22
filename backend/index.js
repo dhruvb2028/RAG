@@ -153,6 +153,88 @@ app.post("/upload", upload.single("file"), async (req, res) => {
     }
 });
 
+// Helper for query translation / rewriting
+async function rewriteQuery(query, history = []) {
+    const llm = new ChatGoogleGenerativeAI({
+        model: "gemini-2.5-flash",
+        temperature: 0.1,
+    });
+    
+    let historyPrompt = "";
+    if (history.length > 0) {
+        historyPrompt = `\nHere is the feedback from previous retrieval attempts that returned irrelevant data:\n` +
+            history.map((h, i) => `Attempt ${i + 1} rewrote query to: "${h.query}". Feedback: ${h.feedback}`).join("\n") +
+            `\nPlease rewrite the query focusing on a different aspect, using synonyms, or expanding/simplifying the terms to improve vector search retrieval.`;
+    }
+
+    const rewritePrompt = `You are a search query rewriter. Your task is to rewrite the user's input query to maximize its chances of retrieving relevant document chunks from a vector database.
+Fix any typos, spelling errors, or grammatical issues in the query.
+Add context-rich search synonyms, expand acronyms, or rephrase it to make it more descriptive and suitable for vector search, while preserving the original intent.
+Respond ONLY with the rewritten query, and nothing else. Do not wrap in quotes or code blocks.
+
+User Query: "${query}"
+${historyPrompt}`;
+
+    const response = await llm.invoke(rewritePrompt);
+    return response.content.trim().replace(/^["']|["']$/g, '');
+}
+
+// Helper for HyDE (Hypothetical Document Embeddings)
+async function generateHydeDocument(query) {
+    const llm = new ChatGoogleGenerativeAI({
+        model: "gemini-2.5-flash",
+        temperature: 0.3,
+    });
+
+    const hydePrompt = `Given the search query below, write a short, plausible hypothetical document section or answer that would directly answer this query.
+Do not worry about absolute factual correctness—simply write a coherent, detailed response that contains the typical vocabulary, terminology, and structure of a document answering this query.
+Do not include any introductions, headers, or explanations. Write only the hypothetical document content.
+
+Query: "${query}"`;
+
+    const response = await llm.invoke(hydePrompt);
+    return response.content.trim();
+}
+
+// Helper for LLM as a Judge
+async function evaluateChunks(query, chunks) {
+    if (!chunks || chunks.length === 0) return [];
+    
+    const llm = new ChatGoogleGenerativeAI({
+        model: "gemini-2.5-flash",
+        temperature: 0.1,
+    });
+
+    const judgePrompt = `You are a relevance judge. Evaluate if the retrieved document chunks are relevant to answering the user's query.
+A chunk is relevant if it contains any information, context, or definitions that help answer the query, even if it doesn't fully answer it. Otherwise, mark it as not relevant.
+
+Query: "${query}"
+
+Chunks to evaluate:
+${chunks.map((c, idx) => `[Chunk ${idx}]\nSource: ${c.metadata.source}\nContent: ${c.pageContent}`).join("\n\n")}
+
+For each chunk, evaluate its relevance. You MUST respond with a JSON array of objects, containing "index" (number) and "relevant" (boolean).
+Example response format:
+[
+  {"index": 0, "relevant": true},
+  {"index": 1, "relevant": false}
+]
+Respond ONLY with the JSON array. Do not include markdown code block formatting (like \`\`\`json) or any additional text.`;
+
+    try {
+        const response = await llm.invoke(judgePrompt);
+        let rawContent = response.content.trim();
+        if (rawContent.startsWith("```")) {
+            rawContent = rawContent.replace(/^```(json)?/, "").replace(/```$/, "").trim();
+        }
+        const parsed = JSON.parse(rawContent);
+        return parsed;
+    } catch (e) {
+        console.error("Failed to parse LLM relevance judge response:", e);
+        return chunks.map((_, idx) => ({ index: idx, relevant: true }));
+    }
+}
+
 app.post("/ask", async (req, res) => {
     try {
         const { query } = req.body;
@@ -170,12 +252,85 @@ app.post("/ask", async (req, res) => {
             return res.status(400).json({ error: "Failed to connect to collection. Have you indexed a document yet?" });
         }
 
-        console.log("Retrieving relevant context...");
-        const retriever = vectorStore.asRetriever({ k: 4 });
-        const searchedChunks = await retriever.invoke(query);
+        console.log("Starting Corrective RAG retrieval pipeline...");
         
-        if (!searchedChunks || searchedChunks.length === 0) {
-            return res.json({ answer: "No relevant context found in the uploaded documents." });
+        let currentQuery = query;
+        let attemptsHistory = [];
+        let ragSteps = [];
+        let finalChunks = [];
+        let retryCount = 0;
+        const MAX_RETRIES = 2; // 1 initial attempt + 1 retry
+
+        while (retryCount < MAX_RETRIES) {
+            console.log(`[Attempt ${retryCount + 1}] Processing...`);
+            
+            // 1. Query Translation
+            const rewritten = await rewriteQuery(currentQuery, attemptsHistory);
+            console.log(`[Attempt ${retryCount + 1}] Rewritten Query:`, rewritten);
+
+            // 2. HyDE Document Generation
+            const hydeDoc = await generateHydeDocument(rewritten);
+            console.log(`[Attempt ${retryCount + 1}] Generated HyDE Document.`);
+
+            // 3. Retrieval using HyDE Document
+            const retriever = vectorStore.asRetriever({ k: 4 });
+            const retrieved = await retriever.invoke(hydeDoc);
+            
+            if (!retrieved || retrieved.length === 0) {
+                console.log(`[Attempt ${retryCount + 1}] No chunks found in database.`);
+                ragSteps.push({
+                    attempt: retryCount + 1,
+                    rewrittenQuery: rewritten,
+                    hypotheticalAnswer: hydeDoc,
+                    judgement: []
+                });
+                break;
+            }
+
+            // 4. LLM Relevance Judge
+            const judgements = await evaluateChunks(query, retrieved);
+            console.log(`[Attempt ${retryCount + 1}] Relevance Judgements:`, judgements);
+
+            ragSteps.push({
+                attempt: retryCount + 1,
+                rewrittenQuery: rewritten,
+                hypotheticalAnswer: hydeDoc,
+                judgement: judgements
+            });
+
+            // Filter out irrelevant chunks
+            const relevantChunks = retrieved.filter((_, idx) => {
+                const judgeObj = judgements.find(j => j.index === idx);
+                return judgeObj ? judgeObj.relevant : false;
+            });
+
+            console.log(`[Attempt ${retryCount + 1}] Found ${relevantChunks.length} relevant chunks out of ${retrieved.length}.`);
+
+            if (relevantChunks.length >= 2 || (relevantChunks.length >= 1 && retryCount === MAX_RETRIES - 1)) {
+                finalChunks = relevantChunks;
+                break;
+            } else {
+                console.log(`[Attempt ${retryCount + 1}] Insufficient relevance. Triggering corrective loop rewrite.`);
+                attemptsHistory.push({
+                    query: rewritten,
+                    feedback: `The search returned only ${relevantChunks.length} relevant chunks. The general topics in the retrieved chunks were: ` + 
+                              `${[...new Set(retrieved.map(c => c.pageContent.slice(0, 80)))].join("; ")}. ` +
+                              `None of them sufficiently answered the user's specific query intent.`
+                });
+                
+                retryCount++;
+                if (retryCount === MAX_RETRIES) {
+                    finalChunks = relevantChunks.length > 0 ? relevantChunks : retrieved;
+                }
+            }
+        }
+
+        if (!finalChunks || finalChunks.length === 0) {
+            return res.json({ 
+                answer: "I cannot answer this based on the provided documents.",
+                sources: [],
+                ragSteps
+            });
         }
 
         const llm = new ChatGoogleGenerativeAI({
@@ -191,7 +346,7 @@ app.post("/ask", async (req, res) => {
         - Cite the source (e.g., file name) if available in the context metadata.
 
         Context:
-        ${JSON.stringify(searchedChunks, null, 2)}
+        ${JSON.stringify(finalChunks, null, 2)}
         `;
 
         const messages = [
@@ -199,10 +354,14 @@ app.post("/ask", async (req, res) => {
             ["human", query]
         ];
 
-        console.log("Generating answer...");
+        console.log("Generating grounded final answer...");
         const response = await llm.invoke(messages);
         
-        res.json({ answer: response.content, sources: [...new Set(searchedChunks.map(c => c.metadata.source))] });
+        res.json({ 
+            answer: response.content, 
+            sources: [...new Set(finalChunks.map(c => c.metadata.source))],
+            ragSteps
+        });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "An error occurred during answer generation." });
@@ -236,6 +395,24 @@ app.post("/delete", async (req, res) => {
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: "Failed to delete document.", details: e.message });
+    }
+});
+
+app.post("/clear", async (req, res) => {
+    try {
+        console.log("Clearing collection from Qdrant:", COLLECTION_NAME);
+        try {
+            await qdrantClient.deleteCollection(COLLECTION_NAME);
+        } catch (err) {
+            if (err.status !== 404) {
+                throw err;
+            }
+            console.log("Collection did not exist, nothing to delete.");
+        }
+        res.json({ message: "All vectors and documents successfully cleared." });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: "Failed to clear collection.", details: e.message });
     }
 });
 

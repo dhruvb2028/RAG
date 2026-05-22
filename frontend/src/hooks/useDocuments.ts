@@ -111,6 +111,19 @@ export function useDocuments() {
     });
   }, [documents]);
 
+  const clearAllDocuments = useCallback(() => {
+    const originalDocs = [...documents];
+    setDocuments([]);
+    
+    fetch(`${API_URL}/clear`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" }
+    }).catch((err) => {
+      console.error(err);
+      setDocuments(originalDocs);
+    });
+  }, [documents]);
+
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -137,6 +150,7 @@ export function useDocuments() {
     isDragging,
     addDocument,
     removeDocument,
+    clearAllDocuments,
     handleDragOver,
     handleDragLeave,
     handleDrop,

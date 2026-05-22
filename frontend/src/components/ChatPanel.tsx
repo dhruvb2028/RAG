@@ -1,7 +1,6 @@
 import { useRef, useEffect, useState } from "react";
 import { Send, Trash2, ArrowUp } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useChat } from "../hooks/useChat";
 import { ChatMessage } from "./ChatMessage";
 import { TypingIndicator } from "./TypingIndicator";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,8 +12,12 @@ const SUGGESTED_QUESTIONS = [
   "Explain in simple terms",
 ];
 
-export function ChatPanel() {
-  const { messages, isTyping, sendMessage, clearChat } = useChat();
+interface ChatPanelProps {
+  chatState: ReturnType<typeof import("../hooks/useChat").useChat>;
+}
+
+export function ChatPanel({ chatState }: ChatPanelProps) {
+  const { messages, isTyping, sendMessage, clearChat } = chatState;
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);

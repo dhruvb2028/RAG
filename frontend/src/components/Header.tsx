@@ -1,12 +1,28 @@
 import { useTheme } from "./theme-provider";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, Trash2 } from "lucide-react";
 
-export function Header() {
+interface HeaderProps {
+  clearChat: () => void;
+  clearAllDocuments: () => void;
+  hasDocuments: boolean;
+  hasMessages: boolean;
+}
+
+export function Header({ clearChat, clearAllDocuments, hasDocuments, hasMessages }: HeaderProps) {
   const { theme, setTheme } = useTheme();
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
   };
+
+  const handleClearSession = () => {
+    if (window.confirm("Are you sure you want to clear the entire session? This will delete all chat history and uploaded documents.")) {
+      clearChat();
+      clearAllDocuments();
+    }
+  };
+
+  const showClear = hasDocuments || hasMessages;
 
   return (
     <header className="shrink-0 h-12 flex items-center px-5 border-b border-border/60 bg-background/95 backdrop-blur-sm z-50">
@@ -32,6 +48,18 @@ export function Header() {
         </div>
 
         <div className="w-px h-4 bg-border" />
+
+        {showClear && (
+          <button
+            onClick={handleClearSession}
+            data-testid="button-clear-session"
+            className="h-8 flex items-center gap-1.5 px-2.5 rounded-md text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/8 border border-border/60 hover:border-destructive/20 transition-all"
+            title="Clear all session documents and chat history"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Clear Session</span>
+          </button>
+        )}
 
         <button
           onClick={toggleTheme}

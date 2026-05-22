@@ -43,6 +43,7 @@ export function useChat() {
            role: "assistant",
            content: data.answer || data.error || "An error occurred",
            citations: data.sources || [],
+           ragSteps: data.ragSteps || [],
            timestamp: Date.now(),
          };
          setMessages((prev) => [...prev, newAiMsg]);
